@@ -20,9 +20,8 @@ jobs:
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'status' &&
-       contains(github.ref, 'pull/') &&
        github.event.state == 'success' &&
-       contains(github.event.context, 'pr-image-mirror'))
+       contains(github.event.context, 'stable-pr-image-mirror'))
     outputs:
       image_tag: ${{ steps.set_image_tag.outputs.tag }}
       base_branch: ${{ steps.get_pr_info.outputs.base_branch }}
