@@ -25,6 +25,7 @@ class api_export(object):
     """Provides ways to export symbols to the ovmsclient API."""
 
     def __init__(self, name, **kwargs):
+        # Adding comment to test change
         self.main_name = name
         self.namespaced_names = kwargs
 
