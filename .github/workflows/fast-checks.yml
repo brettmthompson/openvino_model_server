@@ -55,6 +55,10 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install virtualenv
+        run: |
+          python3 -m pip install --upgrade pip virtualenv
+
       - name: Check for client library changes
         id: client-lib-changes
         uses: dorny/paths-filter@v3
