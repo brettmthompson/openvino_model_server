@@ -90,7 +90,7 @@ jobs:
         env:
           IMAGE_TAG: ${{ needs.setup.outputs.image_tag }}
         run: |
-          FULL_IMAGE="quay.io/opendatahub/openvino_model_server:${IMAGE_TAG}"
+          FULL_IMAGE="quay.io/bretthom/openvino_model_server:${IMAGE_TAG}"
           echo "Pulling image: ${FULL_IMAGE}"
           docker pull ${FULL_IMAGE}
           docker tag ${FULL_IMAGE} openvino/model_server:latest
