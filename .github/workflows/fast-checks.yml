@@ -3,14 +3,13 @@ name: Fast Checks
 on:
   pull_request:
     branches:
-      - stable
-      - stable-2.x
+      - 'stable*'
   workflow_dispatch:
 
 jobs:
   # Style checks (code quality)
   style-checks:
-    name: Style Checks
+    name: ${{ github.event_name == 'pull_request' && format('{0}/', github.base_ref) || '' }}style-checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -27,7 +26,7 @@ jobs:
 
   # SDL security checks
   sdl-security-checks:
-    name: SDL Security Checks
+    name: ${{ github.event_name == 'pull_request' && format('{0}/', github.base_ref) || '' }}sdl-security-checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -44,7 +43,7 @@ jobs:
 
   # Client library tests
   client-lib:
-    name: Client Library Tests
+    name: ${{ github.event_name == 'pull_request' && format('{0}/', github.base_ref) || '' }}client-library-tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
