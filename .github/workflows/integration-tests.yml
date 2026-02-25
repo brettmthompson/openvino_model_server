@@ -54,8 +54,8 @@ jobs:
 
           # Find open PRs targeting the extracted branch where this commit is at HEAD (not just in history)
           # This ensures we only test the image if the PR hasn't moved forward with new commits
-          MATCHING_PRS=$(gh api "repos/${{ github.repository }}/commits/${COMMIT_SHA}/pulls" \
-            --jq --arg base "${BASE_BRANCH}" --arg sha "${COMMIT_SHA}" \
+          MATCHING_PRS=$(gh api "repos/${{ github.repository }}/commits/${COMMIT_SHA}/pulls" | \
+            jq --arg base "${BASE_BRANCH}" --arg sha "${COMMIT_SHA}" \
             '[.[] | select(.state == "open" and .base.ref == $base and .head.sha == $sha)]')
 
           PR_COUNT=$(echo "${MATCHING_PRS}" | jq 'length')
