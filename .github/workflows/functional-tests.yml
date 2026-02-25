@@ -10,7 +10,7 @@ on:
         description: 'Image tag to test (e.g., stable, stable-2.1)'
         required: true
         type: string
-      test_ref:
+      source_ref:
         description: 'Git ref to checkout for tests (branch, tag, or commit SHA)'
         required: true
         type: string
@@ -25,64 +25,47 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'status' &&
        github.event.state == 'success' &&
-       contains(github.event.context, 'stable-image-mirror'))
+       contains(github.event.context, 'ci/prow/image-mirror-stable'))
     outputs:
-      image_tag: ${{ steps.set_image_tag.outputs.tag }}
-      checkout_ref: ${{ steps.set_checkout_ref.outputs.ref }}
+      branch_name: ${{ steps.extract_branch_name.outputs.branch_name }}
+      image_tag: ${{ steps.set_image_tag.outputs.image_tag }}
+      source_ref: ${{ steps.set_source_ref.outputs.source_ref }}
     steps:
-      - name: Get branch information
+      - name: Extract branch name
+        id: extract_branch_name
         if: github.event_name == 'status'
-        id: get_branch_info
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          COMMIT_SHA="${{ github.event.sha }}"
-          echo "Finding stable branches containing commit: ${COMMIT_SHA}"
-
-          # Get all branches that contain this commit via API
-          ALL_BRANCHES=$(gh api "repos/${{ github.repository }}/commits/${COMMIT_SHA}/branches-where-head" --jq '.[].name')
-
-          # Filter for stable and stable-2.x branches explicitly
-          STABLE_BRANCHES=$(echo "${ALL_BRANCHES}" | grep -E '^(stable|stable-2\.x)$' || true)
-
-          if [[ -z "${STABLE_BRANCHES}" ]]; then
-            echo "No stable branches found containing commit ${COMMIT_SHA}"
-            echo "All branches: ${ALL_BRANCHES}"
-            exit 1
-          fi
-
-          # Check for multiple stable branches
-          BRANCH_COUNT=$(echo "${STABLE_BRANCHES}" | wc -l)
-          if [[ ${BRANCH_COUNT} -gt 1 ]]; then
-            echo "ERROR: Commit ${COMMIT_SHA} found on multiple stable branches"
-            echo ""
-            echo "Commits should only be cherry-picked to stable branches, not directly pushed to multiple branches."
-            exit 1
-          fi
-
-          # Use the stable branch
-          BRANCH_NAME=$(echo "${STABLE_BRANCHES}" | head -n1)
+          # Extract branch name from context: ci/prow/image-mirror-stable -> stable
+          CONTEXT="${{ github.event.context }}"
+          BRANCH_NAME="${CONTEXT#ci/prow/image-mirror-}"  # Remove ci/prow/image-mirror- prefix
 
           echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
-          echo "Found branch: ${BRANCH_NAME}"
+          echo "Branch name: ${BRANCH_NAME}"
 
       - name: Set image tag
         id: set_image_tag
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "tag=${{ github.event.inputs.image_tag }}" >> $GITHUB_OUTPUT
+            TAG="${{ github.event.inputs.image_tag }}"
           else
-            echo "tag=${{ steps.get_branch_info.outputs.branch_name }}" >> $GITHUB_OUTPUT
+            COMMIT_SHA="${{ github.event.sha }}"
+            TAG="${{ steps.extract_branch_name.outputs.branch_name }}-${COMMIT_SHA:0:7}"
           fi
 
-      - name: Set checkout ref
-        id: set_checkout_ref
+          echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "Image tag: ${TAG}"
+
+      - name: Set source ref
+        id: set_source_ref
         run: |
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "ref=${{ github.event.inputs.test_ref }}" >> $GITHUB_OUTPUT
+            REF="${{ github.event.inputs.source_ref }}"
           else
-            echo "ref=${{ github.event.sha }}" >> $GITHUB_OUTPUT
+            REF="${{ github.event.sha }}"
           fi
+
+          echo "source_ref=${REF}" >> $GITHUB_OUTPUT
+          echo "Source ref: ${REF}"
 
   # Full functional tests
   functional-tests-all:
@@ -95,16 +78,16 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.checkout_ref }} \
+          gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=pending \
-            -f context="Functional Tests (Full)" \
+            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests-full" \
             -f description="Running full functional tests..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.setup.outputs.checkout_ref }}
+          ref: ${{ needs.setup.outputs.source_ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -132,9 +115,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.checkout_ref }} \
+          gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=success \
-            -f context="Functional Tests (Full)" \
+            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests-full" \
             -f description="Full functional tests passed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
@@ -143,8 +126,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.checkout_ref }} \
+          gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=failure \
-            -f context="Functional Tests (Full)" \
+            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests-full" \
             -f description="Full functional tests failed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
