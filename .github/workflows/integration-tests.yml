@@ -32,7 +32,6 @@ jobs:
        github.event.state == 'success' &&
        contains(github.event.context, 'ci/prow/pr-image-mirror-stable'))
     outputs:
-      branch_name: ${{ steps.extract_branch_name.outputs.branch_name }}
       image_tag: ${{ steps.set_image_tag.outputs.image_tag }}
       source_ref: ${{ steps.set_source_ref.outputs.source_ref }}
     steps:
@@ -133,7 +132,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=pending \
-            -f context="${{ needs.setup.outputs.branch_name }}/file-integrity-test" \
+            -f context="File Integrity Test" \
             -f description="Running file integrity tests..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Checkout repository
@@ -157,7 +156,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=success \
-            -f context="${{ needs.setup.outputs.branch_name }}/file-integrity-test" \
+            -f context="File Integrity Test" \
             -f description="File integrity tests passed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Post failure status to commit
@@ -167,7 +166,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=failure \
-            -f context="${{ needs.setup.outputs.branch_name }}/file-integrity-test" \
+            -f context="File Integrity Test" \
             -f description="File integrity tests failed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
@@ -185,7 +184,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=pending \
-            -f context="${{ needs.setup.outputs.branch_name }}/python-clients-test" \
+            -f context="Python Clients Test" \
             -f description="Running Python client tests..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Checkout repository
@@ -209,7 +208,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=success \
-            -f context="${{ needs.setup.outputs.branch_name }}/python-clients-test" \
+            -f context="Python Clients Test" \
             -f description="Python client tests passed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Post failure status to commit
@@ -219,7 +218,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=failure \
-            -f context="${{ needs.setup.outputs.branch_name }}/python-clients-test" \
+            -f context="Python Clients Test" \
             -f description="Python client tests failed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
@@ -237,7 +236,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=pending \
-            -f context="${{ needs.setup.outputs.branch_name }}/latency-performance-test" \
+            -f context="Latency Performance Test" \
             -f description="Running latency tests..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Checkout repository
@@ -265,7 +264,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=success \
-            -f context="${{ needs.setup.outputs.branch_name }}/latency-performance-test" \
+            -f context="Latency Performance Test" \
             -f description="Latency tests passed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Post failure status to commit
@@ -275,7 +274,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=failure \
-            -f context="${{ needs.setup.outputs.branch_name }}/latency-performance-test" \
+            -f context="Latency Performance Test" \
             -f description="Latency tests failed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
@@ -293,7 +292,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=pending \
-            -f context="${{ needs.setup.outputs.branch_name }}/throughput-performance-test" \
+            -f context="Throughput Performance Test" \
             -f description="Running throughput tests..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Checkout repository
@@ -321,7 +320,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=success \
-            -f context="${{ needs.setup.outputs.branch_name }}/throughput-performance-test" \
+            -f context="Throughput Performance Test" \
             -f description="Throughput tests passed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Post failure status to commit
@@ -331,7 +330,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=failure \
-            -f context="${{ needs.setup.outputs.branch_name }}/throughput-performance-test" \
+            -f context="Throughput Performance Test" \
             -f description="Throughput tests failed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
@@ -349,7 +348,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=pending \
-            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests" \
+            -f context="Functional Tests" \
             -f description="Running functional tests..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Checkout repository
@@ -379,7 +378,7 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=success \
-            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests" \
+            -f context="Functional Tests" \
             -f description="Functional tests passed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
       - name: Post failure status to commit
@@ -389,6 +388,6 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=failure \
-            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests" \
+            -f context="Functional Tests" \
             -f description="Functional tests failed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
