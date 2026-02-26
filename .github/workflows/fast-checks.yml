@@ -14,12 +14,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Run style checks
         run: |
           make style
@@ -31,12 +29,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Run SDL security checks
         run: |
           make sdl-check
@@ -48,18 +44,15 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip virtualenv
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler
-
       - name: Check for client library changes
         id: client-lib-changes
         uses: dorny/paths-filter@v3
@@ -67,7 +60,6 @@ jobs:
           filters: |
             client:
               - 'client/python/ovmsclient/lib/**'
-
       - name: Run client library tests
         if: steps.client-lib-changes.outputs.client == 'true'
         run: |

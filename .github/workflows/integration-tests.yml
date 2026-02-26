@@ -15,6 +15,11 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+  pull-requests: read
+  statuses: write
+
 jobs:
   # Extract image information from the trigger event
   setup:
@@ -38,10 +43,8 @@ jobs:
           # Extract branch name from context: ci/prow/pr-image-mirror-stable -> stable
           CONTEXT="${{ github.event.context }}"
           BRANCH_NAME="${CONTEXT#ci/prow/pr-image-mirror-}"  # Remove ci/prow/pr-image-mirror- prefix
-
           echo "branch_name=${BRANCH_NAME}" >> $GITHUB_OUTPUT
           echo "Branch name: ${BRANCH_NAME}"
-
       - name: Get PR information
         if: github.event_name == 'status'
         id: get_pr_info
@@ -51,23 +54,18 @@ jobs:
           COMMIT_SHA="${{ github.event.sha }}"
           BASE_BRANCH="${{ steps.extract_branch_name.outputs.branch_name }}"
           echo "Finding open PRs with commit ${COMMIT_SHA} at HEAD targeting branch ${BASE_BRANCH}"
-
           # Find open PRs targeting the extracted branch where this commit is at HEAD (not just in history)
           # This ensures we only test the image if the PR hasn't moved forward with new commits
           MATCHING_PRS=$(gh api "repos/${{ github.repository }}/commits/${COMMIT_SHA}/pulls" | \
             jq --arg base "${BASE_BRANCH}" --arg sha "${COMMIT_SHA}" \
             '[.[] | select(.state == "open" and .base.ref == $base and .head.sha == $sha)]')
-
           PR_COUNT=$(echo "${MATCHING_PRS}" | jq 'length')
-
           if [[ "${PR_COUNT}" -eq 0 ]]; then
             echo "No open PRs targeting ${BASE_BRANCH} branch found with commit ${COMMIT_SHA} at HEAD"
             exit 1
           fi
-
           # Select the PR with the highest number (most recently created)
           PR_NUM=$(echo "${MATCHING_PRS}" | jq -r 'max_by(.number).number')
-
           if [[ "${PR_COUNT}" -gt 1 ]]; then
             echo "Found ${PR_COUNT} open PRs targeting ${BASE_BRANCH} branch with commit ${COMMIT_SHA} at HEAD"
             echo "${MATCHING_PRS}" | jq -r '.[] | "  - PR #\(.number): \(.head.ref) -> \(.base.ref)"'
@@ -75,9 +73,7 @@ jobs:
           else
             echo "Found PR #${PR_NUM} targeting ${BASE_BRANCH}"
           fi
-
           echo "pr_number=${PR_NUM}" >> $GITHUB_OUTPUT
-
       - name: Set image tag
         id: set_image_tag
         run: |
@@ -86,10 +82,8 @@ jobs:
           else
             TAG="pr-${{ steps.get_pr_info.outputs.pr_number }}"
           fi
-
           echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
           echo "Image tag: ${TAG}"
-
       - name: Set source ref
         id: set_source_ref
         run: |
@@ -98,7 +92,6 @@ jobs:
           else
             REF="${{ github.event.sha }}"
           fi
-
           echo "source_ref=${REF}" >> $GITHUB_OUTPUT
           echo "Source ref: ${REF}"
 
@@ -116,11 +109,9 @@ jobs:
           echo "Pulling image: ${FULL_IMAGE}"
           docker pull ${FULL_IMAGE}
           docker tag ${FULL_IMAGE} openvino/model_server:latest
-
       - name: Save Docker image
         run: |
           docker save openvino/model_server:latest | gzip > model-server-image.tar.gz
-
       - name: Upload image artifact
         uses: actions/upload-artifact@v4
         with:
@@ -145,26 +136,20 @@ jobs:
             -f context="${{ needs.setup.outputs.branch_name }}/file-integrity-test" \
             -f description="Running file integrity tests..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.setup.outputs.source_ref }}
-
       - name: Download Docker image
         uses: actions/download-artifact@v4
         with:
           name: model-server-image
-
       - name: Load Docker image
         run: |
           docker load < model-server-image.tar.gz
-
       - name: Run file integrity test
-        id: test
         run: |
           make run_lib_files_test
-
       - name: Post success status to commit
         if: github.event_name == 'status' && success()
         env:
@@ -175,7 +160,6 @@ jobs:
             -f context="${{ needs.setup.outputs.branch_name }}/file-integrity-test" \
             -f description="File integrity tests passed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
       - name: Post failure status to commit
         if: github.event_name == 'status' && failure()
         env:
@@ -204,26 +188,20 @@ jobs:
             -f context="${{ needs.setup.outputs.branch_name }}/python-clients-test" \
             -f description="Running Python client tests..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.setup.outputs.source_ref }}
-
       - name: Download Docker image
         uses: actions/download-artifact@v4
         with:
           name: model-server-image
-
       - name: Load Docker image
         run: |
           docker load < model-server-image.tar.gz
-
       - name: Run Python clients test
-        id: test
         run: |
           make test_python_clients
-
       - name: Post success status to commit
         if: github.event_name == 'status' && success()
         env:
@@ -234,7 +212,6 @@ jobs:
             -f context="${{ needs.setup.outputs.branch_name }}/python-clients-test" \
             -f description="Python client tests passed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
       - name: Post failure status to commit
         if: github.event_name == 'status' && failure()
         env:
@@ -263,31 +240,24 @@ jobs:
             -f context="${{ needs.setup.outputs.branch_name }}/latency-performance-test" \
             -f description="Running latency tests..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.setup.outputs.source_ref }}
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Download Docker image
         uses: actions/download-artifact@v4
         with:
           name: model-server-image
-
       - name: Load Docker image
         run: |
           docker load < model-server-image.tar.gz
-
       - name: Run latency test
-        id: test
         run: |
           make test_perf
-
       - name: Post success status to commit
         if: github.event_name == 'status' && success()
         env:
@@ -298,7 +268,6 @@ jobs:
             -f context="${{ needs.setup.outputs.branch_name }}/latency-performance-test" \
             -f description="Latency tests passed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
       - name: Post failure status to commit
         if: github.event_name == 'status' && failure()
         env:
@@ -327,31 +296,24 @@ jobs:
             -f context="${{ needs.setup.outputs.branch_name }}/throughput-performance-test" \
             -f description="Running throughput tests..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.setup.outputs.source_ref }}
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Download Docker image
         uses: actions/download-artifact@v4
         with:
           name: model-server-image
-
       - name: Load Docker image
         run: |
           docker load < model-server-image.tar.gz
-
       - name: Run throughput test
-        id: test
         run: |
           make test_throughput
-
       - name: Post success status to commit
         if: github.event_name == 'status' && success()
         env:
@@ -362,7 +324,6 @@ jobs:
             -f context="${{ needs.setup.outputs.branch_name }}/throughput-performance-test" \
             -f description="Throughput tests passed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
       - name: Post failure status to commit
         if: github.event_name == 'status' && failure()
         env:
@@ -374,9 +335,9 @@ jobs:
             -f description="Throughput tests failed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-  # Functional smoke tests
-  functional-tests-smoke:
-    name: Functional Tests (Smoke)
+  # Functional tests
+  functional-tests:
+    name: Functional Tests
     runs-on: ubuntu-latest
     needs: [setup, pull-image]
     if: always() && needs.setup.result == 'success'
@@ -388,37 +349,29 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=pending \
-            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests-smoke" \
-            -f description="Running functional smoke tests..." \
+            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests" \
+            -f description="Running functional tests..." \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ needs.setup.outputs.source_ref }}
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Download Docker image
         uses: actions/download-artifact@v4
         with:
           name: model-server-image
-
       - name: Load Docker image
         run: |
           docker load < model-server-image.tar.gz
-
-      - name: Run functional smoke tests
-        id: test
+      - name: Run functional tests
         env:
           IMAGE: openvino/model_server:latest
-          TEST_PATH: "tests/functional/test_single_model.py tests/functional/test_batching.py tests/functional/test_multi_models.py -k test_run_inference"
         run: |
           make test_functional
-
       - name: Post success status to commit
         if: github.event_name == 'status' && success()
         env:
@@ -426,10 +379,9 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=success \
-            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests-smoke" \
-            -f description="Functional smoke tests passed" \
+            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests" \
+            -f description="Functional tests passed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
       - name: Post failure status to commit
         if: github.event_name == 'status' && failure()
         env:
@@ -437,6 +389,6 @@ jobs:
         run: |
           gh api repos/${{ github.repository }}/statuses/${{ needs.setup.outputs.source_ref }} \
             -f state=failure \
-            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests-smoke" \
-            -f description="Functional smoke tests failed" \
+            -f context="${{ needs.setup.outputs.branch_name }}/functional-tests" \
+            -f description="Functional tests failed" \
             -f target_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
